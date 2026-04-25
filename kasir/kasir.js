@@ -368,3 +368,57 @@ function cetakNota(items, total, metode, bayar, kembali) {
     printArea.innerHTML = strukHTML;
     window.print();
 }
+// ==========================================
+// 7. MEMUAT PENDAPATAN HARIAN KASIR
+// ==========================================
+async function loadPendapatanHarian() {
+    const elOmzet = document.getElementById("omzetKasirHarian");
+    if(!elOmzet) return; 
+    
+    const kasirAktif = sessionStorage.getItem("username");
+    
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const todayStr = `${dd}/${mm}/${yyyy}`;
+
+    const response = await apiGet("getTransactions");
+    
+    if (response.success && response.data) {
+        let omzetHariIni = 0;
+        
+        response.data.forEach(trx => {
+            if (!trx.Tanggal) return;
+            let tanggalSaja = "";
+            const dateString = String(trx.Tanggal);
+            
+            // Penyesuaian format tanggal
+            if (dateString.includes("T")) {
+                const dObj = new Date(dateString);
+                const d = String(dObj.getDate()).padStart(2, '0');
+                const m = String(dObj.getMonth() + 1).padStart(2, '0');
+                const y = dObj.getFullYear();
+                tanggalSaja = `${d}/${m}/${y}`;
+            } else {
+                tanggalSaja = dateString.split(" ")[0];
+            }
+
+            if (tanggalSaja === todayStr && trx.Kasir === kasirAktif) {
+                omzetHariIni += (Number(trx.Total_Harga) || 0);
+            }
+        });
+        
+        elOmzet.textContent = `Rp ${omzetHariIni.toLocaleString('id-ID')}`;
+    } else {
+        elOmzet.textContent = "Rp 0";
+    }
+}
+
+// ==========================================
+// 8. JALANKAN SEMUA FUNGSI SAAT WEB DIBUKA
+// ==========================================
+window.onload = () => {
+    loadCatalog();          // Tarik data barang
+    loadPendapatanHarian(); // Tarik data omzet
+};

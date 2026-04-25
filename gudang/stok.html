@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gudang - Manajemen Stok</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <nav class="bg-blue-800 text-white p-4 shadow-md flex justify-between items-center">
+        <h1 class="text-xl font-bold">📦 Modul Gudang</h1>
+        <div class="flex items-center gap-4">
+            <span id="welcomeMessage" class="text-sm"></span>
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm transition">Logout</button>
+        </div>
+    </nav>
+
+    <main class="p-6 max-w-6xl mx-auto space-y-6">
+        
+        <div class="bg-white p-6 rounded-lg shadow-md flex justify-between items-center">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-700">Manajemen Produk & Stok</h2>
+                <p class="text-sm text-gray-500">Lihat katalog atau tambahkan barang baru via scanner.</p>
+            </div>
+            
+            <button id="btnStartScan" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow flex items-center gap-2">
+                📱 Tambah via Scanner HP
+            </button>
+        </div>
+
+        <div id="scanStatusPanel" class="hidden bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded shadow-sm">
+            <p class="font-bold text-yellow-700">Sesi Scan Aktif! <span id="displaySessionId" class="bg-yellow-200 px-2 py-1 rounded text-black tracking-widest font-mono"></span></p>
+            <p class="text-sm text-yellow-600 mt-1">Masukkan Session ID di atas pada aplikasi Scanner HP Anda. Menunggu data barcode masuk...</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-gray-50 text-gray-700">
+                    <tr>
+                        <th class="p-4 border-b">Barcode</th>
+                        <th class="p-4 border-b">Nama Barang</th>
+                        <th class="p-4 border-b">Harga Jual</th>
+                        <th class="p-4 border-b">Stok</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="text-gray-600 divide-y divide-gray-200">
+                    <tr><td colspan="4" class="p-4 text-center">Memuat data dari database...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/auth.js"></script>
+    <script src="gudang.js"></script>
+</body>
+</html>

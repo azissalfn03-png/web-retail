@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gudang - Manajemen Stok</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+    <nav class="bg-blue-800 text-white p-4 shadow-md flex justify-between items-center">
+        <h1 class="text-xl font-bold">📦 Modul Gudang</h1>
+        <div class="flex items-center gap-4">
+            <span id="welcomeMessage" class="text-sm"></span>
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm transition">Logout</button>
+        </div>
+    </nav>
+
+    <main class="p-6 max-w-6xl mx-auto space-y-6">
+        
+        <div class="bg-white p-6 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-700">Manajemen Produk & Stok</h2>
+                <p class="text-sm text-gray-500">Lihat katalog atau tambahkan barang baru via scanner.</p>
+            </div>
+            
+            <div class="flex gap-2">
+                <button id="btnTambahManual" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow flex items-center gap-2">
+                    ✍️ Tambah Manual
+                </button>
+                <button id="btnStartScan" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow flex items-center gap-2">
+                    📱 Tambah via Scanner HP
+                </button>
+            </div>
+        </div>
+
+        <div id="scanStatusPanel" class="hidden bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded shadow-sm">
+            <p class="font-bold text-yellow-700">Sesi Scan Aktif! <span id="displaySessionId" class="bg-yellow-200 px-2 py-1 rounded text-black tracking-widest font-mono"></span></p>
+            <p class="text-sm text-yellow-600 mt-1">Masukkan Session ID di atas pada aplikasi Scanner HP Anda. Menunggu data barcode masuk...</p>
+        </div>
+
+        <div id="productModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+                <h3 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">Form Input Produk/Stok</h3>
+                
+                <form id="productForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Barcode</label>
+                        <input type="text" id="inputBarcode" required class="mt-1 block w-full p-2 border rounded focus:ring-blue-500 font-mono" placeholder="Scan atau ketik...">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nama Barang</label>
+                        <input type="text" id="inputNama" required class="mt-1 block w-full p-2 border rounded focus:ring-blue-500" placeholder="Contoh: Sepatu Nike Air...">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Harga Beli (Modal)</label>
+                            <input type="number" id="inputModal" required class="mt-1 block w-full p-2 border rounded focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Harga Jual</label>
+                            <input type="number" id="inputJual" required class="mt-1 block w-full p-2 border rounded focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Jumlah Stok Masuk</label>
+                        <input type="number" id="inputStok" required class="mt-1 block w-full p-2 border rounded focus:ring-blue-500" min="1">
+                    </div>
+                    
+                    <div class="flex justify-end gap-2 mt-6">
+                        <button type="button" id="btnTutupModal" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">Batal</button>
+                        <button type="submit" id="btnSimpanProduk" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">Simpan Data</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-gray-50 text-gray-700">
+                    <tr>
+                        <th class="p-4 border-b">Barcode</th>
+                        <th class="p-4 border-b">Nama Barang</th>
+                        <th class="p-4 border-b">Harga Jual</th>
+                        <th class="p-4 border-b">Stok</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody" class="text-gray-600 divide-y divide-gray-200">
+                    <tr><td colspan="4" class="p-4 text-center">Memuat data dari database...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/auth.js"></script>
+    <script src="gudang.js"></script>
+</body>
+</html>

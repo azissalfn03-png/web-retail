@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kasir - Point of Sale</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media screen {
+            #printArea { display: none; }
+        }
+        @media print {
+            /* Menghilangkan margin default browser dan header/footer (URL, Tanggal) */
+            @page { margin: 0; }
+            body { margin: 0; background-color: white; }
+            
+            /* Sembunyikan seluruh UI web kasir */
+            body > *:not(#printArea) { display: none; }
+            
+            /* Pengaturan Kertas Struk 58mm */
+            #printArea { 
+                display: block !important; 
+                width: 58mm; /* Lebar standar kertas thermal kecil */
+                margin: 0;
+                padding: 4mm; /* Jarak aman dari pinggir kertas */
+                font-family: 'Consolas', 'Courier New', monospace; /* Font khas kasir */
+                font-size: 11px; /* Ukuran pas untuk kertas kecil */
+                line-height: 1.3;
+                color: black;
+            }
+            
+            /* Utilitas Desain Struk */
+            #printArea p, #printArea h2 { margin: 0; padding: 0; }
+            .struk-header { text-align: center; margin-bottom: 5px; }
+            .struk-header h2 { font-size: 14px; font-weight: bold; }
+            .struk-divider { border-bottom: 1px dashed black; margin: 5px 0; }
+            .struk-table { width: 100%; border-collapse: collapse; }
+            .struk-table td { vertical-align: top; padding: 2px 0; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .text-bold { font-weight: bold; }
+        }
+    </style>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e3a8a">
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <nav class="bg-blue-800 text-white p-4 shadow-md flex justify-between items-center">
+        <h1 class="text-xl font-bold">🛒 Modul Kasir (POS)</h1>
+        <div class="flex items-center gap-4">
+            <div class="hidden md:flex bg-blue-900 px-3 py-1 rounded text-sm items-center gap-2 border border-blue-700">
+                <span class="text-blue-300">Omzet Shift Ini:</span>
+                <span id="omzetKasirHarian" class="font-bold text-green-400">Memuat...</span>
+            </div>
+            
+            <span id="welcomeMessage" class="text-sm"></span>
+            <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm transition">Logout</button>
+        </div>
+    </nav>
+
+    <main class="flex-1 p-6 max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <div class="md:col-span-1 space-y-6">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-lg font-semibold text-gray-700 mb-4">Input Produk</h2>
+                
+                <button id="btnStartScan" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded shadow flex items-center justify-center gap-2 font-bold mb-4">
+                    📱 Scan via HP
+                </button>
+
+                <div id="scanStatusPanel" class="hidden bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded shadow-sm text-sm mb-4">
+                    <p class="font-bold text-yellow-700">Sesi Kasir Aktif!</p>
+                    <p class="text-yellow-800">Session ID: <span id="displaySessionId" class="bg-yellow-200 px-2 py-1 rounded font-mono text-base font-bold"></span></p>
+                    <p class="text-yellow-600 mt-1">Gunakan HP untuk scan barang.</p>
+                </div>
+
+                <hr class="my-4">
+
+                <div id="tukarBanner" class="hidden mb-4 p-3 bg-red-500 text-white rounded-lg text-center animate-pulse shadow-lg">
+                    <p class="text-[10px] font-black uppercase tracking-widest">⚠️ Mode Retur / Tukar Aktif</p>
+                </div>
+                <button id="btnModeTukar" class="w-full mb-4 bg-gray-100 text-gray-600 p-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-50 hover:text-red-600 transition-all border border-gray-200">
+                    <i data-lucide="refresh-ccw" class="w-4 h-4"></i> Aktifkan Mode Retur
+                </button>
+
+                <button id="btnPengeluaran" class="w-full mb-4 bg-amber-100 text-amber-700 p-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-amber-200 transition-all">
+                    <i data-lucide="banknote" class="w-4 h-4"></i> Catat Pengeluaran
+                </button>
+                
+                <label class="block text-sm font-medium text-gray-700 mb-1">Input Manual Barcode</label>
+                <div class="flex gap-2">
+                    <input type="text" id="manualBarcode" class="flex-1 p-2 border rounded focus:ring-blue-500 focus:border-blue-500" placeholder="Ketik barcode...">
+                    <button id="btnAddManual" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Tambah</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="md:col-span-2 bg-white rounded-lg shadow-md flex flex-col h-full">
+            <div class="p-4 border-b bg-gray-50 flex justify-between items-center rounded-t-lg">
+                <h2 class="text-lg font-semibold text-gray-700">Keranjang Belanja</h2>
+                <button id="btnClearCart" class="text-sm text-red-500 hover:text-red-700 underline">Kosongkan</button>
+            </div>
+            
+            <div class="p-4 flex-1 overflow-y-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="text-gray-500 text-sm border-b">
+                        <tr>
+                            <th class="pb-2">Barang</th>
+                            <th class="pb-2">Harga</th>
+                            <th class="pb-2 text-center">Qty</th>
+                            <th class="pb-2 text-right">Subtotal</th>
+                            <th class="pb-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cartBody" class="text-gray-700 divide-y">
+                        <tr><td colspan="5" class="py-4 text-center text-gray-400">Keranjang masih kosong</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+
+            <div class="p-6 bg-gray-50 border-t rounded-b-lg">
+                <div class="flex justify-between items-end mb-4">
+                    <span class="text-gray-600 font-medium">Total Pembayaran:</span>
+                    <span id="displayTotal" class="text-3xl font-bold text-blue-800">Rp 0</span>
+                </div>
+                <button id="btnCheckout" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-colors cursor-not-allowed opacity-50" disabled>
+                    Selesaikan Pembayaran
+                </button>
+            </div>
+        </div>
+        <div id="paymentModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div class="bg-blue-600 p-4 text-white flex justify-between items-center">
+            <h3 class="font-bold text-lg">Selesaikan Pembayaran</h3>
+        </div>
+        <div class="p-6">
+            <div class="text-center mb-6 bg-blue-50 py-4 rounded-xl border border-blue-100">
+                <p class="text-sm font-bold text-blue-600 uppercase tracking-wider mb-1">Total Tagihan</p>
+               <p id="modalTotalAkhir" class="text-4xl font-black text-gray-900">Rp 0</p>
+            </div>
+            
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Metode Pembayaran</label>
+                    <select id="paymentMethod" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 font-semibold text-gray-700 outline-none">
+                        <option value="TUNAI">💵 Tunai (Cash)</option>
+                        <option value="QRIS">📱 QRIS / E-Wallet</option>
+                    </select>
+                </div>
+
+                <div>
+    <label class="block text-sm font-bold text-gray-700 mb-2">Diskon <span class="text-xs text-red-500 font-normal">*Opsional</span></label>
+    <div class="grid grid-cols-2 gap-3">
+        <div class="relative">
+            <input type="number" id="inputDiskonPersen" oninput="hitungDiskonPersen()" class="block w-full pr-10 p-3 border-2 border-red-200 bg-red-50 rounded-lg focus:ring-red-500 focus:border-red-500 text-xl font-bold transition text-red-600 outline-none" placeholder="0" min="0" max="100">
+            <span class="absolute right-4 top-3 font-bold text-red-500">%</span>
+        </div>
+        <div class="relative">
+            <span class="absolute left-3 top-3 font-bold text-red-500">Rp</span>
+            <input type="number" id="inputDiskon" oninput="updateModalHitungan()" class="block w-full pl-9 p-3 border-2 border-red-200 bg-red-50 rounded-lg focus:ring-red-500 focus:border-red-500 text-xl font-bold transition text-red-600 outline-none" placeholder="0" min="0">
+        </div>
+    </div>
+</div>
+
+                <div id="cashInputArea">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">Uang Dibayar</label>
+                    <div class="relative">
+                        <span class="absolute left-4 top-3 font-bold text-gray-500">Rp</span>
+                        <input type="number" id="inputUang" oninput="updateModalHitungan()" class="block w-full pl-10 p-3 border-2 border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-xl font-bold transition outline-none" placeholder="0" min="0">
+                    </div>
+                </div>
+
+                <div id="kembalianArea" class="bg-gray-50 p-4 rounded-lg border-2 border-dashed border-gray-300 flex justify-between items-center">
+                    <p class="text-sm font-bold text-gray-500 uppercase">Kembalian</p>
+                    <p id="modalKembalian" class="text-2xl font-bold text-gray-400">Rp 0</p>
+                </div>
+            </div>
+            
+            <div class="flex justify-end gap-3 mt-6 pt-4 border-t">
+                <button type="button" id="btnTutupPayment" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-2 rounded-lg font-bold transition">Batal</button>
+                <button type="button" id="btnProsesBayar" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow-lg font-bold flex items-center gap-2 transition">
+                    ✓ Bayar & Cetak
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+        <div id="printArea"></div>
+
+    </main>
+    
+    <div id="expenseModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-8">
+        <h3 class="text-xl font-black mb-4">Catat Pengeluaran</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Keterangan</label>
+                <input type="text" id="expNote" class="w-full p-4 bg-slate-50 rounded-2xl outline-none" placeholder="Misal: Beli Lakban">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Nominal (Rp)</label>
+                <input type="number" id="expAmount" class="w-full p-4 bg-slate-50 rounded-2xl font-black text-xl" placeholder="0">
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 mt-6">
+            <button id="btnCancelExp" class="p-4 font-bold text-slate-400">Batal</button>
+            <button id="btnSaveExp" class="bg-amber-500 text-white p-4 rounded-2xl font-black shadow-lg shadow-amber-200">Simpan</button>
+        </div>
+    </div>
+</div>
+
+    <script src="../assets/js/api.js"></script>
+    <script src="../assets/js/auth.js"></script>
+    <script src="kasir.js"></script>
+</body>
+</html>
